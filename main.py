@@ -1,4 +1,5 @@
 import discord
+from discord.ext import tasks
 import time
 
 from selenium import webdriver
@@ -44,7 +45,8 @@ def getInstagramLastPostWebsiteByInstagramDriver(instagram_driver=None):
 def getInstagramLastPostWebsiteMessage():
     instagram_driver = getDriverByURL()
     instagram_last_post_website = getInstagramLastPostWebsiteByInstagramDriver(instagram_driver)
-    instagram_last_post_website_message = f'New post: {instagram_last_post_website}'
+    instagram_last_post_website_message = f'桌遊社Instagram有新貼文啦，快去看看吧～\n貼文網址： {instagram_last_post_website}'
+    print(instagram_last_post_website_message)
     return instagram_last_post_website_message
 
 
@@ -56,33 +58,31 @@ async def on_ready():
     game = discord.Game('The best board game: Agricola')
     # discord.Status: online = 'online', offline = 'offline', idle = 'idle', dnd = 'dnd', do_not_disturb = 'dnd', invisible = 'invisible'
     await client.change_presence(status=discord.Status.online, activity=game)
+    getNewAnnouncement.start()
 
 
-@client.event
-# When a new message is sent in a channel
-async def on_message(message):
-    # Exclude messages from the bot itself to avoid infinite loops
-    if message.author == client.user:
-        return
-    
-    if message.content.startswith('!get'):
-        try:
-            # Retrieve the last post website message from instagram
-            instagram_last_post_website_message = getInstagramLastPostWebsiteMessage()
-            
-            # Retrieve the last message sent by the bot in the channel
-            async for msg in message.channel.history():
-                if msg.author == client.user:
-                    last_bot_message = msg.content
-                    break
-                else:
-                    last_bot_message = None
-            
-            # If the last post website message is not same with the bot's last message, send the last post website message
-            if instagram_last_post_website_message != last_bot_message:
-                await message.channel.send(instagram_last_post_website_message)
-        except Exception as e:
-            await message.channel.send(f'An error occurred: {str(e)}')
+@tasks.loop(minutes=10)
+async def getNewAnnouncement():
+    with open('channel_id.txt', 'r') as channel_id_file:
+        channel_id = channel_id_file.read()
+    channel = client.get_channel(int(channel_id))
+    try:
+        # Retrieve the last post website message from instagram
+        instagram_last_post_website_message = getInstagramLastPostWebsiteMessage()
+        
+        # Retrieve the last message sent by the bot in the channel
+        async for msg in channel.history():
+            if msg.author == client.user:
+                last_bot_message = msg.content
+                break
+            else:
+                last_bot_message = None
+        
+        # If the last post website message is not same with the bot's last message, send the last post website message
+        if instagram_last_post_website_message != last_bot_message:
+            await channel.send(instagram_last_post_website_message)
+    except Exception as e:
+        await channel.send(f'An error occurred: {str(e)}')
 
 
 def main():
