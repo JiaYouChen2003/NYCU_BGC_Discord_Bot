@@ -7,10 +7,17 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
+# 機器人正在玩的遊戲
 GAME_PLAYING = 'The best board game: Agricola'
+# 機器人要在哪裡發言
+DISCORD_ANNOUNCEMENT_CHANNEL_NAME = '公告區'
+
+# 社團INSTAGRAM的網址
 INSTAGRAM_URL = 'https://www.instagram.com/nycubgc/'
+# INSTAGRAM公告前面要加的詞
 INSTAGRAM_MESSAGE_PREFIX = '桌遊社Instagram有新貼文啦，快去看看吧\n貼文網址：'
 
+# 測試時INSTAGRAM的公告
 TEST_INSTAGRAM_LAST_POST_WEBSITE = 'https://www.instagram.com/nycubgc/p/C5yA0PqyA88/?img_index=1'
 
 # client connects to Discord, intents specify bot permissions
@@ -70,9 +77,7 @@ async def on_ready():
 
 @tasks.loop(minutes=10)
 async def getNewAnnouncement():
-    with open('channel_id.txt', 'r') as channel_id_file:
-        channel_id = channel_id_file.read()
-    channel = client.get_channel(int(channel_id))
+    channel = discord.utils.get(client.get_all_channels(), name=DISCORD_ANNOUNCEMENT_CHANNEL_NAME)
     try:
         # Retrieve the last post website message from instagram
         instagram_last_post_website_message = Instagram_Functions.getInstagramLastPostWebsiteMessageByURL(url=INSTAGRAM_URL)
