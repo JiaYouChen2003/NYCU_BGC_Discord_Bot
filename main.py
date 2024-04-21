@@ -1,5 +1,6 @@
 import discord
 from discord.ext import tasks
+import sys
 import time
 
 from selenium import webdriver
@@ -8,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 
 GAME_PLAYING = 'The best board game: Agricola'
 INSTAGRAM_URL = 'https://www.instagram.com/nycubgc/'
-INSTAGRAM_MESSAGE_PREFIX = '桌遊社Instagram有新貼文啦，快去看看吧～\n貼文網址：'
+INSTAGRAM_MESSAGE_PREFIX = '桌遊社Instagram有新貼文啦，快去看看吧\n貼文網址：'
 
 TEST_INSTAGRAM_LAST_POST_WEBSITE = 'https://www.instagram.com/nycubgc/p/C5yA0PqyA88/?img_index=1'
 
@@ -98,4 +99,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if sys.argv[1] == 'test':
+        INSTAGRAM_URL = None
+        main()
+    elif sys.argv[1] == 'main':
+        main()
