@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 # 機器人正在玩的遊戲
 GAME_PLAYING = 'The best board game: Agricola'
 # 機器人要在哪裡發言
-DISCORD_ANNOUNCEMENT_CHANNEL_NAME = '公告區'
+DISCORD_ANNOUNCEMENT_CHANNEL_NAME = '麻瓜大廳'
 
 # 社團INSTAGRAM的網址
 INSTAGRAM_URL = 'https://www.instagram.com/nycubgc/'
