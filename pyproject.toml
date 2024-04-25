@@ -1,0 +1,11 @@
+[tool.flake8]
+exclude = [
+    ".venv"
+]
+ignore = [
+    "E128",
+    "E501",
+    "F403",
+    "F405",
+    "W293"
+]
