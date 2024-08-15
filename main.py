@@ -1,5 +1,6 @@
 import discord
 from discord.ext import tasks
+import os
 import sys
 import time
 
@@ -11,6 +12,10 @@ from selenium.webdriver.chrome.options import Options
 GAME_PLAYING = 'The best board game: Agricola'
 # 機器人要在哪裡發言
 DISCORD_ANNOUNCEMENT_CHANNEL_NAME = '麻瓜大廳'
+# 機器人出錯會寫在哪裡
+DISCORD_ERROR_CHANNEL_NAME = '測試'
+# 出錯時幾分鐘後重試
+MINUTES = 10
 
 # 社團INSTAGRAM的網址
 INSTAGRAM_URL = 'https://www.instagram.com/nycubgc/'
@@ -44,6 +49,8 @@ class Instagram_Functions():
     def getInstagramLastPostWebsiteMessageByURL(url=None):
         instagram_driver = getDriverByURL(url=url)
         instagram_last_post_website = Instagram_Functions.__getInstagramLastPostWebsiteByInstagramDriver(instagram_driver)
+        if instagram_last_post_website == 0:
+            return 0
         instagram_last_post_website_message = f'{INSTAGRAM_MESSAGE_PREFIX}{instagram_last_post_website}'
         print(instagram_last_post_website_message)
         return instagram_last_post_website_message
@@ -51,17 +58,19 @@ class Instagram_Functions():
     @staticmethod
     def __getInstagramLastPostWebsiteByInstagramDriver(instagram_driver=None):
         if instagram_driver is None:
-            instagram_last_post_webiste = TEST_INSTAGRAM_LAST_POST_WEBSITE
+            instagram_last_post_website = TEST_INSTAGRAM_LAST_POST_WEBSITE
             
             print('TEST MODE: instagram driver is None')
-            print(f'Last post website: {instagram_last_post_webiste}')
-            return instagram_last_post_webiste
+            print(f'Last post website: {instagram_last_post_website}')
+            return instagram_last_post_website
         else:
-            post_list = instagram_driver.find_elements(By.TAG_NAME, 'a')[3:]
-            instagram_last_post_webiste = post_list[0].get_attribute('href')
+            new_post = instagram_driver.find_element(By.CLASS_NAME, '_aagu')
+            instagram_last_post_website = new_post.find_element(By.XPATH, '..').get_attribute('href')
+            if not instagram_last_post_website.startswith(INSTAGRAM_URL):
+                return 0
             
-            print(f'Last post website: {instagram_last_post_webiste}')
-            return instagram_last_post_webiste
+            print(f'Last post website: {instagram_last_post_website}')
+            return instagram_last_post_website
 
 
 # Event library invocation
@@ -75,30 +84,37 @@ async def on_ready():
     getNewAnnouncement.start()
 
 
-@tasks.loop(minutes=10)
+@tasks.loop(minutes=MINUTES, count=2)
 async def getNewAnnouncement():
-    channel = discord.utils.get(client.get_all_channels(), name=DISCORD_ANNOUNCEMENT_CHANNEL_NAME)
     try:
+        channel = discord.utils.get(client.get_all_channels(), name=DISCORD_ANNOUNCEMENT_CHANNEL_NAME)
         # Retrieve the last post website message from instagram
         instagram_last_post_website_message = Instagram_Functions.getInstagramLastPostWebsiteMessageByURL(url=INSTAGRAM_URL)
+        assert instagram_last_post_website_message != 0, 'Instagram website structure have been changed'
         
         # Retrieve the last message sent by the bot in the channel
+        last_bot_message = ''
         async for msg in channel.history():
             if msg.author == client.user:
                 last_bot_message = msg.content
                 break
-            else:
-                last_bot_message = None
         
         # If the last post website message is not same with the bot's last message, send the last post website message
-        if instagram_last_post_website_message != last_bot_message:
+        if instagram_last_post_website_message != last_bot_message or last_bot_message.startswith('An error occurred: '):
             await channel.send(instagram_last_post_website_message)
+        
+        getNewAnnouncement.stop()
     except Exception as e:
-        await channel.send(f'An error occurred: {str(e)}')
+        channel = discord.utils.get(client.get_all_channels(), name=DISCORD_ERROR_CHANNEL_NAME)
+        await channel.send(f'An error occurred: {str(e)}. Retry in {MINUTES} minutes')
 
 
 def main():
-    with open('token.txt', 'r') as token_file:
+    # optional: for task scheduler to find the bot token
+    token_root = os.path.dirname(__file__)
+    if token_root == '':
+        token_root = '.'
+    with open(token_root + '/token.txt', 'r') as token_file:
         token = token_file.read()
     client.run(token)
 
